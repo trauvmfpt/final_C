@@ -260,7 +260,28 @@ namespace SpringHeroBank.controller
 
         public void TransactionHistory()
         {
-            
+            Console.WriteLine("Transaction History");
+            Console.WriteLine("1. Search by Date.");
+            Console.WriteLine("2. Search by Time Period.");
+            Console.WriteLine("3. Exit.");
+            Console.WriteLine("---------------------------------------------");
+            Console.WriteLine("Please enter your choice (1|2|3): ");
+            var choice = Utility.GetInt32Number();
+            switch (choice)
+            {
+                case 1:
+                    model.ShowTransactionHistoryByDate();
+                    break;
+                case 2:
+                    model.ShowTransactionHistoryByTimePeriod();
+                    break;
+                case 3:
+                    Console.WriteLine("Exit from Transaction History.");
+                    break;
+                default:
+                    Console.WriteLine("Invalid choice.");
+                    break;
+            }
         }
     }
 }

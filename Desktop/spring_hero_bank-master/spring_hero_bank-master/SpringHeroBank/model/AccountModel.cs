@@ -224,6 +224,7 @@ namespace SpringHeroBank.model
                     if (updateAccountResult == 1 && insertTransactionResult == 1)
                     {
                         trans.Commit();
+                        DbConnection.Instance().CloseConnection();
                         return true;
                     }
                 }
@@ -232,6 +233,7 @@ namespace SpringHeroBank.model
             {
                 Console.WriteLine(e.Message);
                 trans.Rollback();
+                DbConnection.Instance().CloseConnection();
                 return false;
             }
 
@@ -316,7 +318,12 @@ namespace SpringHeroBank.model
             return account;
         }
         
-        public Boolean TransactionHistory()
+        public bool ShowTransactionHistoryByDate()
+        {
+            return false;
+        }
+
+        public bool ShowTransactionHistoryByTimePeriod()
         {
             return false;
         }
