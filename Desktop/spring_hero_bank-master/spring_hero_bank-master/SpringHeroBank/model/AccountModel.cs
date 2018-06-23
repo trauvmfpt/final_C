@@ -97,14 +97,14 @@ namespace SpringHeroBank.model
             return true;
         }
 
-        public bool UpdateTransactionStatus(string id, int transactionType)
+        public bool UpdateTransactionStatus(string id, int status)
         {
             var updateTransactionResult = 0;
-            var queryUpdateTransaction = "update `transactions` set transactionType = @transactionType where id = @id";
+            var queryUpdateTransaction = "update `transactions` set status = @status where id = @id";
             var cmdUpdateTransaction =
                 new MySqlCommand(queryUpdateTransaction, DbConnection.Instance().Connection);
             cmdUpdateTransaction.Parameters.AddWithValue("@id", id);
-            cmdUpdateTransaction.Parameters.AddWithValue("@transactionType", transactionType);
+            cmdUpdateTransaction.Parameters.AddWithValue("@status", status);
             updateTransactionResult = cmdUpdateTransaction.ExecuteNonQuery();
             if (updateTransactionResult == 1)
             {
