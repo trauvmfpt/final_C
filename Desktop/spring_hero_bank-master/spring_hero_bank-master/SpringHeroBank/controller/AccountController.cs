@@ -159,7 +159,7 @@ namespace SpringHeroBank.controller
             var amount = Utility.GetUnsignDecimalNumber();
             Console.WriteLine("Please enter message content: ");
             var content = Console.ReadLine();
-//            Program.currentLoggedIn = model.GetAccountByUserName(Program.currentLoggedIn.Username);
+            Program.currentLoggedIn = model.GetAccountByUserName(Program.currentLoggedIn.Username);
             var historyTransaction = new Transaction
             {
                 Id = Guid.NewGuid().ToString(),
@@ -188,36 +188,61 @@ namespace SpringHeroBank.controller
         {
             Console.WriteLine("Transfer");
             Console.WriteLine("--------------------");
-            Console.WriteLine("Please enter receiver's account: ");
-            var receiverAccountNumber = Console.ReadLine();
-            var receiver = model.GetAccountByAccountNumber(receiverAccountNumber);
-            Console.WriteLine("Full name: " + receiver.FullName);
-            Console.WriteLine("Account number: " + receiver.AccountNumber);
-            Console.WriteLine("Please enter amount to transfer: ");
-            var amount = Utility.GetUnsignDecimalNumber();
-            Console.WriteLine("Please enter message content: ");
-            var content = Console.ReadLine();
-            var historyTransaction = new Transaction
+            Console.WriteLine("Please enter receiver's account number: ");
+            try
             {
-                Id = Guid.NewGuid().ToString(),
-                Type = Transaction.TransactionType.TRANSFER,
-                Amount = amount,
-                Content = content,
-                SenderAccountNumber = Program.currentLoggedIn.AccountNumber,
-                ReceiverAccountNumber = receiver.AccountNumber ,
-                Status = Transaction.ActiveStatus.DONE
-            };
-            if (model.CheckTransfer(Program.currentLoggedIn, receiver, historyTransaction))
-            {
-                Console.WriteLine("Transaction success!");
+                var receiverAccountNumber = Console.ReadLine();
+                if (!model.CheckExistAccountNumber(receiverAccountNumber))
+                {
+                    throw new SpringHeroTransactionException("Receiver Account is inactive or doesn't exist. Please check again.");
+                }
+                var receiver = model.GetAccountByAccountNumber(receiverAccountNumber);
+                Console.WriteLine("Full name: " + receiver.FullName);
+                Console.WriteLine("Account number: " + receiver.AccountNumber);
+                Console.WriteLine("Please enter amount to transfer: ");
+                var amount = Utility.GetUnsignDecimalNumber();
+                if (!model.CheckEnoughBalance(amount))
+                {
+                    throw new SpringHeroTransactionException("Not enough money in balance to make transaction.");
+                }
+                Console.WriteLine("Please enter message content: ");
+                var content = Console.ReadLine();
+                Console.WriteLine("--------------------");
+                Console.WriteLine("Transfer information: ");
+                Console.WriteLine("Receiver Account Number: "  + receiver.AccountNumber + " - Name: " + receiver.FullName);
+                Console.WriteLine("Amount: " + amount);
+                Console.WriteLine("Message: " + content);
+                Console.WriteLine("--------------------");
+                Console.WriteLine("Proceed? (y|n)");
+                var confirm = Console.ReadLine();
+                if (confirm == "n")
+                {
+                    throw new SpringHeroTransactionException("Transaction Cancelled.");
+                }
+                var historyTransaction = new Transaction
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Type = Transaction.TransactionType.TRANSFER,
+                    Amount = amount,
+                    Content = content,
+                    SenderAccountNumber = Program.currentLoggedIn.AccountNumber,
+                    ReceiverAccountNumber = receiver.AccountNumber ,
+                    Status = Transaction.ActiveStatus.PROCESSING
+                };
+                if (!model.Transfer(Program.currentLoggedIn, receiver, historyTransaction))
+                {
+                    throw new SpringHeroTransactionException("Transaction failed. Please try again.");
+                }
+                Console.WriteLine("Transaction Success!");
             }
-            else
+            catch (SpringHeroTransactionException e)
             {
-                Console.WriteLine("Transaction fails, please try again!");
+                Console.WriteLine(e.Message);
             }
+            
             Program.currentLoggedIn = model.GetAccountByUserName(Program.currentLoggedIn.Username);
             Console.WriteLine("Current balance: " + Program.currentLoggedIn.Balance);
-            Console.WriteLine("Press enter to continue!");
+            Console.WriteLine("Press any key to continue...");
             Console.ReadLine();
         }
 
