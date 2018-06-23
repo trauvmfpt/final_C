@@ -1,7 +1,6 @@
 ﻿using System;
 using ConsoleApp3.model;
 using MySql.Data.MySqlClient;
-using SpringHeroBank.controller;
 using SpringHeroBank.entity;
 using SpringHeroBank.error;
 using SpringHeroBank.utility;
@@ -9,7 +8,7 @@ using SpringHeroBank.utility;
 namespace SpringHeroBank.model
 {
     public class AccountModel
-    {   
+    {
         public Boolean Save(Account account)
         {
             DbConnection.Instance().OpenConnection(); // đảm bảo rằng đã kết nối đến db thành công.
@@ -36,15 +35,13 @@ namespace SpringHeroBank.model
             return result == 1;
         }
         
-        public Boolean CheckTransfer(Account account1, Account account2, Transaction historyTransaction)
+        public Boolean CheckTransfer(Account account1, Transaction historyTransaction)
         {
-            DbConnection.Instance().OpenConnection();
-            
+            DbConnection.Instance().OpenConnection();            
             //4.1 Mở transaction, block try - catch
             var transaction = DbConnection.Instance().Connection.BeginTransaction();
             try
             {
-
                 //4.2.1 Lấy thông tin tài khoản một lần nữa đảm bảo mới nhất
                 var queryBalance = "select balance from `accounts` where username = @username and status = @status";
                 MySqlCommand queryBalanceCommand = new MySqlCommand(queryBalance, DbConnection.Instance().Connection);
@@ -60,29 +57,29 @@ namespace SpringHeroBank.model
                 }
 
                 // Đảm bảo sẽ có bản ghi.
-                var currentBalance1 = balanceReader.GetDecimal("balance");
-     
+                var currentBalance = balanceReader.GetDecimal("balance");
                 balanceReader.Close();
                 //Kiểm tra lại có đủ tiền trong tài khoản không
                 var updateAccountResult = 0;
                 var updateAccount2Result = 0;
-                if(historyTransaction.Amount > currentBalance1)
+                if(historyTransaction.Amount > currentBalance)
                 {
                     transaction.Rollback();
+                    Console.WriteLine("Transaction Amount exceeds Account Balance.");
                 }
 
                 // 3. Update số dư vào tài khoản.
                 // 3.1. Tính toán lại số tiền trong tài khoản.
                 else
                 {
-                    currentBalance1 -= historyTransaction.Amount;
+                    currentBalance -= historyTransaction.Amount;
                     // 3.2. Update balance của người gửi vào database.
                     var queryUpdateAccountBalance =
                         "update `accounts` set balance = @balance where username = @username and status = 1";
                     var cmdUpdateAccountBalance =
                         new MySqlCommand(queryUpdateAccountBalance, DbConnection.Instance().Connection);
                     cmdUpdateAccountBalance.Parameters.AddWithValue("@username", account1.Username);
-                    cmdUpdateAccountBalance.Parameters.AddWithValue("@balance", currentBalance1);
+                    cmdUpdateAccountBalance.Parameters.AddWithValue("@balance", currentBalance);
                     updateAccountResult = cmdUpdateAccountBalance.ExecuteNonQuery();
                 }
                 
@@ -90,6 +87,7 @@ namespace SpringHeroBank.model
 
                 //    4.3. Cộng tiền người nhận.
                 //        4.3.1. Lấy thông tin tài khoản nhận, đảm bảo tài khoản không bị khoá hoặc inactive.
+                Account account2 = GetAccountByAccountNumber(historyTransaction.ReceiverAccountNumber);
                 if (account2.Status == Account.ActiveStatus.ACTIVE)
                 {
                     account2.Balance += historyTransaction.Amount;
@@ -100,7 +98,7 @@ namespace SpringHeroBank.model
                     cmdUpdateAccount2Balance.Parameters.AddWithValue("@username", account2.Username);
                     cmdUpdateAccount2Balance.Parameters.AddWithValue("@balance", account2.Balance);
                     updateAccount2Result = cmdUpdateAccount2Balance.ExecuteNonQuery();
-
+                    Console.WriteLine("finally");
                 }
                 else
                 {
@@ -111,19 +109,18 @@ namespace SpringHeroBank.model
                 var queryInsertTransaction = "insert into `transactions` " +
                                              "(id, transactionType, amount, content, senderAccountNumber, receiverAccountNumber, status) " +
                                              "values (@id, @type, @amount, @content, @senderAccountNumber, @receiverAccountNumber, @status)";
-                var cmdInsertTransaction =
-                    new MySqlCommand(queryInsertTransaction, DbConnection.Instance().Connection);
+                var cmdInsertTransaction = new MySqlCommand(queryInsertTransaction, DbConnection.Instance().Connection);
                 cmdInsertTransaction.Parameters.AddWithValue("@id", historyTransaction.Id);
                 cmdInsertTransaction.Parameters.AddWithValue("@type", historyTransaction.Type);
                 cmdInsertTransaction.Parameters.AddWithValue("@amount", historyTransaction.Amount);
                 cmdInsertTransaction.Parameters.AddWithValue("@content", historyTransaction.Content);
-                cmdInsertTransaction.Parameters.AddWithValue("@senderAccountNumber",
-                    historyTransaction.SenderAccountNumber);
-                cmdInsertTransaction.Parameters.AddWithValue("@receiverAccountNumber",
-                    historyTransaction.ReceiverAccountNumber);
+                cmdInsertTransaction.Parameters.AddWithValue("@senderAccountNumber", historyTransaction.SenderAccountNumber);
+                cmdInsertTransaction.Parameters.AddWithValue("@receiverAccountNumber", historyTransaction.ReceiverAccountNumber);
                 cmdInsertTransaction.Parameters.AddWithValue("@status", historyTransaction.Status);
                 insertTransactionResult = cmdInsertTransaction.ExecuteNonQuery();
-
+                Console.WriteLine(updateAccountResult);
+                Console.WriteLine(updateAccount2Result);
+                Console.WriteLine(insertTransactionResult);
                 if (updateAccountResult == 1 && updateAccount2Result == 1 && insertTransactionResult == 1)
                 {
                     transaction.Commit();
@@ -132,6 +129,7 @@ namespace SpringHeroBank.model
             }
             catch (SpringHeroTransactionException e)
             {
+                Console.WriteLine(e.Message);
                 transaction.Rollback();
                 return false;
             }
@@ -168,6 +166,7 @@ namespace SpringHeroBank.model
                 {
                     // Không tồn tại bản ghi tương ứng, lập tức rollback transaction, trả về false.
                     // Hàm dừng tại đây.
+                    //Console.WriteLine("Invalid username");
                     throw new SpringHeroTransactionException("Invalid username");
                 }
 
@@ -193,6 +192,7 @@ namespace SpringHeroBank.model
                 // 3.1. Tính toán lại số tiền trong tài khoản.
                 if (historyTransaction.Type == Transaction.TransactionType.DEPOSIT)
                 {
+                    
                     currentBalance += historyTransaction.Amount;
                 }
                 else
@@ -204,12 +204,13 @@ namespace SpringHeroBank.model
                 var updateAccountResult = 0;
                 var queryUpdateAccountBalance =
                     "update `accounts` set balance = @balance where username = @username and status = 1";
+                
                 var cmdUpdateAccountBalance =
                     new MySqlCommand(queryUpdateAccountBalance, DbConnection.Instance().Connection);
                 cmdUpdateAccountBalance.Parameters.AddWithValue("@username", account.Username);
                 cmdUpdateAccountBalance.Parameters.AddWithValue("@balance", currentBalance);
                 updateAccountResult = cmdUpdateAccountBalance.ExecuteNonQuery();
-
+                
                 // 4. Lưu thông tin transaction vào bảng transaction.
                 var insertTransactionResult = 0;
                 var queryInsertTransaction = "insert into `transactions` " +
@@ -227,7 +228,6 @@ namespace SpringHeroBank.model
                     historyTransaction.ReceiverAccountNumber);
                 cmdInsertTransaction.Parameters.AddWithValue("@status", historyTransaction.Status);
                 insertTransactionResult = cmdInsertTransaction.ExecuteNonQuery();
-
                 if (updateAccountResult == 1 && insertTransactionResult == 1)
                 {
                     transaction.Commit();
@@ -236,6 +236,7 @@ namespace SpringHeroBank.model
             }
             catch (SpringHeroTransactionException e)
             {
+                Console.WriteLine(e.Message);
                 transaction.Rollback();
                 return false;
             }
@@ -244,9 +245,18 @@ namespace SpringHeroBank.model
             return false;
         }
 
-        
         public Boolean CheckExistUserName(string username)
-        {
+        {    
+            DbConnection.Instance().OpenConnection();
+            var queryString = "select * from  `accounts` where username = @username and status = 1";
+            var cmd = new MySqlCommand(queryString, DbConnection.Instance().Connection);
+            cmd.Parameters.AddWithValue("@username", username);
+            var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                return true;
+            }
+            DbConnection.Instance().CloseConnection();
             return false;
         }
 
@@ -279,11 +289,40 @@ namespace SpringHeroBank.model
             DbConnection.Instance().CloseConnection();
             return account;
         }
+        
+        public Account GetAccountByAccountNumber(string accountNumber)
+        {
+            DbConnection.Instance().OpenConnection();
+            var queryString = "select * from  `accounts` where accountNumber = @accountNumber and status = 1";
+            var cmd = new MySqlCommand(queryString, DbConnection.Instance().Connection);
+            cmd.Parameters.AddWithValue("@accountNumber", accountNumber);
+            var reader = cmd.ExecuteReader();
+            Account account = null;
+            if (reader.Read())
+            {
+                var username = reader.GetString("username");
+                var password = reader.GetString("password");
+                var salt = reader.GetString("salt");
+                var _accountNumber = reader.GetString("accountNumber");
+                var identityCard = reader.GetString("identityCard");
+                var balance = reader.GetDecimal("balance");
+                var phone = reader.GetString("phone");
+                var email = reader.GetString("email");
+                var fullName = reader.GetString("fullName");
+                var createdAt = reader.GetString("createdAt");
+                var updatedAt = reader.GetString("updatedAt");
+                var status = reader.GetInt32("status");
+                account = new Account(username, password, salt, _accountNumber, identityCard, balance, phone, email,
+                    fullName, createdAt, updatedAt, (Account.ActiveStatus) status);
+            }
 
+            DbConnection.Instance().CloseConnection();
+            return account;
+        }
+        
         public Boolean TransactionHistory()
         {
             return false;
         }
-        
     }
 }

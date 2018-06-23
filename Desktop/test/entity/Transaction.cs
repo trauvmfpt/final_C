@@ -7,7 +7,7 @@
             PROCESSING = 1,
             DONE = 2,
             REJECT = 0,
-            DELETED = -1,
+            DELETED = -1
         }
 
         public enum TransactionType

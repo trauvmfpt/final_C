@@ -1,5 +1,6 @@
 ﻿using System;
 using SpringHeroBank.entity;
+using SpringHeroBank.error;
 using SpringHeroBank.model;
 using SpringHeroBank.utility;
 
@@ -17,6 +18,28 @@ namespace SpringHeroBank.controller
             var username = Console.ReadLine();
             Console.WriteLine("Password: ");
             var password = Console.ReadLine();
+            
+            /*var password = "";
+            ConsoleKeyInfo key;
+            do
+            {
+                key = Console.ReadKey(true);
+                if (key.Key != ConsoleKey.Backspace && key.Key != ConsoleKey.Enter)
+                {
+                    password += key.KeyChar;
+                    Console.Write("*");
+                }
+                else
+                {
+                    if (key.Key == ConsoleKey.Backspace && password.Length > 0)
+                    {
+                        password = password.Substring(0, (password.Length - 1));
+                        Console.Write("\b \b");
+                    }
+                }
+            }
+            while (key.Key != ConsoleKey.Enter);*/
+            
             Console.WriteLine("Confirm Password: ");
             var cpassword = Console.ReadLine();
             Console.WriteLine("Identity Card: ");
@@ -27,12 +50,14 @@ namespace SpringHeroBank.controller
             var email = Console.ReadLine();
             Console.WriteLine("Phone: ");
             var phone = Console.ReadLine();
-            var account = new Account(username, password, cpassword, identityCard, phone, email, fullName);
+            var status = 1;
+            var account = new Account(username, password, cpassword, identityCard, phone, email, fullName, (Account.ActiveStatus) status);
             var errors = account.CheckValid();
             if (errors.Count == 0)
             {
                 model.Save(account);
                 Console.WriteLine("Register success!");
+                Console.WriteLine("Press Enter to continue...");
                 Console.ReadLine();
             }
             else
@@ -75,7 +100,7 @@ namespace SpringHeroBank.controller
             if (account == null)
             {
                 // Sai thông tin username, trả về thông báo lỗi không cụ thể.
-                Console.WriteLine("Invalid login information. Please try again.");
+                Console.WriteLine("Invalid username. Please try again.");
                 return false;
             }
 
@@ -83,7 +108,7 @@ namespace SpringHeroBank.controller
             if (account.Password != Hash.GenerateSaltedSHA1(password, account.Salt))
             {
                 // Sai thông tin password, trả về thông báo lỗi không cụ thể.
-                Console.WriteLine("Invalid login information. Please try again.");
+                Console.WriteLine("Invalid password. Please try again.");
                 return false;
             }
 
@@ -100,7 +125,7 @@ namespace SpringHeroBank.controller
             var amount = Utility.GetUnsignDecimalNumber();
             Console.WriteLine("Please enter message content: ");
             var content = Console.ReadLine();
-//            Program.currentLoggedIn = model.GetAccountByUserName(Program.currentLoggedIn.Username);
+            Program.currentLoggedIn = model.GetAccountByUserName(Program.currentLoggedIn.Username);
             var historyTransaction = new Transaction
             {
                 Id = Guid.NewGuid().ToString(),
@@ -111,6 +136,7 @@ namespace SpringHeroBank.controller
                 ReceiverAccountNumber = Program.currentLoggedIn.AccountNumber,
                 Status = Transaction.ActiveStatus.DONE
             };
+            
             if (model.UpdateBalance(Program.currentLoggedIn, historyTransaction))
             {
                 Console.WriteLine("Transaction success!");
@@ -162,11 +188,8 @@ namespace SpringHeroBank.controller
         {
             Console.WriteLine("Transfer");
             Console.WriteLine("--------------------");
-            Console.WriteLine("Please enter receiver's account: ");
-            var receivername = Console.ReadLine();
-            var receiveracc = model.GetAccountByUserName(receivername);
-            Console.WriteLine("Full name: " + receiveracc.FullName);
-            Console.WriteLine("Account number: " + receiveracc.AccountNumber);
+            Console.WriteLine("Please enter receiver's account number: ");
+            string receiverAccountNumber = Console.ReadLine();
             Console.WriteLine("Please enter amount to transfer: ");
             var amount = Utility.GetUnsignDecimalNumber();
             Console.WriteLine("Please enter message content: ");
@@ -178,10 +201,11 @@ namespace SpringHeroBank.controller
                 Amount = amount,
                 Content = content,
                 SenderAccountNumber = Program.currentLoggedIn.AccountNumber,
-                ReceiverAccountNumber = receiveracc.AccountNumber ,
+                ReceiverAccountNumber = receiverAccountNumber,
                 Status = Transaction.ActiveStatus.DONE
             };
-            if (model.CheckTransfer(Program.currentLoggedIn, receiveracc, historyTransaction))
+            
+            if (model.CheckTransfer(Program.currentLoggedIn, historyTransaction))
             {
                 Console.WriteLine("Transaction success!");
             }
@@ -189,6 +213,7 @@ namespace SpringHeroBank.controller
             {
                 Console.WriteLine("Transaction fails, please try again!");
             }
+            
             Program.currentLoggedIn = model.GetAccountByUserName(Program.currentLoggedIn.Username);
             Console.WriteLine("Current balance: " + Program.currentLoggedIn.Balance);
             Console.WriteLine("Press enter to continue!");
@@ -205,6 +230,11 @@ namespace SpringHeroBank.controller
             Console.WriteLine("Balance: " + Program.currentLoggedIn.Balance);
             Console.WriteLine("Press enter to continue!");
             Console.ReadLine();
+        }
+
+        public void TransactionHistory()
+        {
+            
         }
     }
 }

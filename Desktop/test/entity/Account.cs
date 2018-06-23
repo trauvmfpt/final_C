@@ -72,6 +72,18 @@ namespace SpringHeroBank.entity
         {
         }
 
+        public Account(string username, string password, string confirmPassword, string identityCard, string phone, string email, string fullName, ActiveStatus status)
+        {
+            _username = username;
+            _password = password;
+            _confirmPassword = confirmPassword;
+            _identityCard = identityCard;
+            _phone = phone;
+            _email = email;
+            _fullName = fullName;
+            _status = status;
+        }
+
         public string ConfirmPassword
         {
             get => _confirmPassword;

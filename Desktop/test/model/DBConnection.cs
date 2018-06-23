@@ -1,5 +1,4 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 using MySql.Data.MySqlClient;
 
 namespace ConsoleApp3.model

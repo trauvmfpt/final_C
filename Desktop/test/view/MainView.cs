@@ -1,6 +1,5 @@
 ﻿using System;
 using SpringHeroBank.controller;
-using SpringHeroBank.entity;
 using SpringHeroBank.utility;
 
 namespace SpringHeroBank.view
@@ -34,9 +33,10 @@ namespace SpringHeroBank.view
                 Console.WriteLine("2. Withdraw.");
                 Console.WriteLine("3. Deposit.");
                 Console.WriteLine("4. Transfer.");
-                Console.WriteLine("5. Exit.");
+                Console.WriteLine("5. Transaction History");
+                Console.WriteLine("6. Exit.");
                 Console.WriteLine("---------------------------------------------");
-                Console.WriteLine("Please enter your choice (1|2|3|4|5): ");
+                Console.WriteLine("Please enter your choice (1|2|3|4|5|6): ");
                 var choice = Utility.GetInt32Number();
                 switch (choice)
                 {
@@ -53,6 +53,9 @@ namespace SpringHeroBank.view
                         controller.Transfer();
                         break;
                     case 5:
+                        controller.TransactionHistory();
+                        break;
+                    case 6:
                         Console.WriteLine("See you later.");
                         Environment.Exit(1);
                         break;
